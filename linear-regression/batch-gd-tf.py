@@ -2,12 +2,20 @@
     linear regression batch gradient descent
     on TensorFlow
 
+    TODO: complete logging
     Author: SayeedM
     Date: 07-07-2014
 '''
 
 import numpy as np
 import tensorflow as tf
+from datetime import datetime
+
+
+# setup some logging first so that tensorboard can visualize the data
+now = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+root_log_dir = "tf_logs"
+log_dir = "{}/run-{}".format(root_log_dir, now)
 
 # again lets say we train a naive system to calculate y = 4x - 1
 # this time using batch gradient descent
@@ -47,14 +55,19 @@ training_op = tf.assign(theta, theta - eta * gradients)
 
 init = tf.global_variables_initializer()
 
+# more logging
+mse_summary = tf.summary.scalar("MSE", training_op)
+file_writer = tf.summary.FileWriter(log_dir, tf.get_default_graph())
+
 with tf.Session() as sess:
     sess.run(init)
 
     for i in range(n_iterations):
-        if (i % 100 == 0):
-            print("iteration # ", i, "  :  MSE = ", mse.eval())
+        #if (i % 100 == 0):
+            #summary_str = mse_summary.eval()
+            #file_writer.add_summary(summary_str)
         sess.run(training_op)
-
+        
     best_theta = theta.eval()
 
 
