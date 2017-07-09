@@ -1,10 +1,9 @@
 '''
-    Running Logistic Regression on Iris Dataset and determine
-    if a given row is Iris Virginica
-    Simple Binary Classification
+    Using Perceptron to predict if a given petal length width
+    is Ireis-setosa
 
     Author: SayeedM
-    Date: 06-07-2017
+    Date: 10-07-2017
 '''
 
 import numpy as np
