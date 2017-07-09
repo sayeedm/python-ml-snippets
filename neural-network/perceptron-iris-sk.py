@@ -9,7 +9,7 @@
 
 import numpy as np
 import pandas as pd
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import Perceptron
 
 
 def irisNameToInt(name):
@@ -32,19 +32,13 @@ iris[4] = iris[4].apply(irisNameToInt)
 iris = iris.as_matrix()
 
 # grab all the petal widths
-X = iris[:, 3].reshape(-1, 1)
-y = (iris[:, 4] == 2).reshape(-1, 1)
+X = iris[:, 2:4]
+y = (iris[:, 4] == 0).reshape(-1, 1)
+print(y)
 
-# running logistic regression
-log_reg = LogisticRegression()
-log_reg.fit(X, y)
+# run Perceptron
+per_clf = Perceptron(random_state = 42)
+per_clf.fit(X, y)
 
-# generating sample inputs
-X_new = np.linspace(0, 3, 10).reshape(-1, 1)
-
-# getting the probabilities
-y_proba = log_reg.predict_proba(X_new)
-
-# now print each inputs False and Truth probability
-for i in range(len(X_new)):
-    print("I : ", X_new[i], " F: ", y_proba[i][0], " , T: ", y_proba[i][1])
+y_pred = per_clf.predict([[2, 0.5]])
+print(y_pred)

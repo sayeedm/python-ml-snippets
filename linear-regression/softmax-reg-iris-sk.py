@@ -22,7 +22,7 @@ def irisNameToInt(name):
 
 
 # loading data
-iris = pd.read_csv('data/iris.data', header = None)
+iris = pd.read_csv('../data/iris.data', header = None)
 
 # converting the name to an encoded int
 # it will assign 2 to iris verginica
