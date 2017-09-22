@@ -10,6 +10,12 @@ from pandas.plotting import scatter_matrix
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.preprocessing import StandardScaler, Imputer, LabelBinarizer
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error
+from sklearn.model_selection import cross_val_score
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import GridSearchCV
+
 
 
 # useful column indexes for generating new column
@@ -68,15 +74,18 @@ def split_data_set(data):
     return train_set, test_set
 
 
+# utility method to display cross validation scores
+def display_scores(scores):
+    print("Scores : ", scores)
+    print("Mean : ", scores.mean())
+    print("SD : ", scores.std())
 
+# our flow begins here
 
 data = load_data()
 train_set, test_set = split_data_set(data)
 
-
-
 # seperating labels (prediction field) from train set
-
 train_labels = train_set["median_house_value"].copy()
 train_set.drop("median_house_value", axis = 1, inplace = True)
 
@@ -88,6 +97,7 @@ train_text = train_set["ocean_proximity"]
 numeric_attributes = list(train_numeric)
 text_attributes = ["ocean_proximity"]
 
+# building sk-learn pipelines
 numeric_pipeline = Pipeline([
     ('selector', DataFrameSelector(numeric_attributes)),
     ('imputer', Imputer(strategy = 'median')),
@@ -105,16 +115,63 @@ full_pipeline = FeatureUnion(transformer_list = [
     ("text_pipeline", text_pipeline)
 ])
 
+# call the pipeline to preprocess data
 train_prepared = full_pipeline.fit_transform(train_set)
 
+# train the model
+forest_reg = RandomForestRegressor()
+forest_reg.fit(train_prepared, train_labels)
+
+# now test some data
+some_data = data.iloc[:5]
+some_data_labels = train_labels.iloc[:5]
+some_data_prepared = full_pipeline.transform(some_data)
+
+print(forest_reg.predict(some_data_prepared))
+print(list(some_data_labels))
+
+# lets calculate the error
+train_prediction = forest_reg.predict(train_prepared)
+mse = mean_squared_error(train_labels, train_prediction)
+rmse = np.sqrt(mse)
+print("Root Mean squared error : ", rmse)
+
+scores = cross_val_score(forest_reg, train_prepared, train_labels,
+                         scoring = "neg_mean_squared_error", cv = 10)
+
+rmse_scores = np.sqrt(-scores)
+display_scores(rmse_scores)
+
+# lets see if we can improve - why not run a grid search
+# to see if we find better parameters for RandomForestRegressor
 
 
+param_grid = [
+    {'n_estimators':[3, 10, 30], 'max_features':[2, 4, 6, 8]},
+    {'bootstrap': [False], 'n_estimators':[3, 10], 'max_features':[2, 3, 4]},
+]
 
-"""
-train_set["rooms_per_household"] = train_set["total_rooms"] / train_set["households"]
-train_set["bedrooms_per_rooms"] = train_set["total_bedrooms"] / train_set["total_rooms"]
-train_set["population_per_household"] = train_set["population"] / train_set["households"]
+test_forest_reg = RandomForestRegressor();
+# this param grid will train model 5 * (3 * 4 + 2 * 3) = 90 times and try to
+# find a best result
+grid_search = GridSearchCV(test_forest_reg, param_grid, cv = 5, scoring = "neg_mean_squared_error")
+grid_search.fit(train_prepared, train_labels)
 
-corr_matrix = train_set.corr()
-print(corr_matrix["median_house_value"].sort_values(ascending = False))
-"""
+print("Best Params ", grid_search.best_params_)
+print("Best Estimator ", grid_search.best_estimator_)
+
+# also we may want to check feature importace
+feature_importances = grid_search.best_estimator_.feature_importances_
+
+final_model = grid_search.best_estimator_
+X_test = test_set.drop("median_house_value", axis = 1)
+y_test = test_set["median_house_value"].copy()
+
+X_test_prepared = full_pipeline.transform(X_test)
+
+test_predictions = final_model.predict(X_test_prepared)
+final_mse = mean_squared_error(y_test, test_predictions)
+
+final_rmse = np.sqrt(final_mse)
+
+print("RMSE Final : ", final_rmse)
